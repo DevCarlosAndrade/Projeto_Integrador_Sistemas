@@ -1,0 +1,11 @@
+Exemplo de consulta utilizando pg_stat_statements para verificar queries pesadas do sistemas 
+(Testar futuramente)
+
+SELECT
+  query,
+  calls,
+  total_exec_time,
+  mean_exec_time
+FROM pg_stat_statements
+ORDER BY total_exec_time DESC
+LIMIT 10;

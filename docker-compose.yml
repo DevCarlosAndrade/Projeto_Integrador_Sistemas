@@ -1,0 +1,51 @@
+services:
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - monitor-net
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana.ini:/etc/grafana/grafana.ini
+      - grafana_data:/var/lib/grafana
+    networks:
+      - monitor-net
+    depends_on:
+      - prometheus
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin ##Alterar quando necessário
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: monitoramento ## Para os primeiros testes, posteriormente podemos usar nomes mais especificos
+    ports:
+      - "5432:5432" ##Verificar se a porta está disponivel e ajustada no BD
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - monitor-net
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all
+
+networks:
+  monitor-net:
+
+volumes:
+  grafana_data:
+  postgres_data:
