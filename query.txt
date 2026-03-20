@@ -9,3 +9,10 @@ SELECT
 FROM pg_stat_statements
 ORDER BY total_exec_time DESC
 LIMIT 10;
+
+
+Acessos: 
+
+Grafana: http://localhost:3000
+
+Prometheus: http://localhost:9090
