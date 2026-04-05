@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+/*@tailwind base;
+@tailwind components;
+@tailwind utilities;
+*/
+
+:root {
+  --foreground-rgb: 248, 250, 252; /* Seu --text-main: #f8fafc */
+  --background-start-rgb: 10, 11, 16; /* Seu --bg-color: #0a0b10 */
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-start-rgb));
+  font-family: 'Inter', sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* Camada de utilitários personalizados (Opcional) */
+@layer components {
+  .btn-primary-custom {
+    @apply bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold 
+           transition-all hover:bg-blue-400 hover:shadow-[0_0_15px_rgba(59,130,246,0.5)];
+  }
+  
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl transition-all;
+  }
+}
