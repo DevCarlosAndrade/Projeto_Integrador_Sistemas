@@ -53,7 +53,7 @@ export default function Dashboard() {
           
           {/* WELCOME CARD (Foco central com brilho) */}
           <div className="bg-gradient-to-br from-blue-600/20 to-transparent border-2 border-blue-500/30 rounded-[2.5rem] p-12 flex flex-col items-center justify-center text-center shadow-[0_0_40px_rgba(59,130,246,0.1)]">
-            <h2 className="text-4xl font-black text-white tracking-tighter mb-4 uppercase leading-none">Bem-Query Sniffer</h2>
+            <h2 className="text-4xl font-black text-white tracking-tighter mb-4 uppercase leading-none">Query Sniffer</h2>
             <p className="text-slate-400 text-sm mb-10 max-w-[280px]">Gerencie a performance do seu banco de dados com IA.</p>
             <div className="w-full space-y-4">
               <button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-900/40 flex items-center justify-center gap-2">
