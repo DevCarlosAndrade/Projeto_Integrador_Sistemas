@@ -1,10 +1,26 @@
 services:
 
+  backend:
+    build: ./backend
+    container_name: backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+    networks:
+      - monitor-net
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/package.json:/app/package.json
+
   prometheus:
     image: prom/prometheus
     container_name: prometheus
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitorar/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
     networks:
@@ -17,7 +33,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./grafana.ini:/etc/grafana/grafana.ini
+      - ./monitorar/grafana/grafana.ini:/etc/grafana/grafana.ini
       - grafana_data:/var/lib/grafana
     networks:
       - monitor-net
