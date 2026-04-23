@@ -4,7 +4,7 @@ services:
     image: prom/prometheus
     container_name: prometheus
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitorar/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
     networks:
@@ -32,10 +32,12 @@ services:
       POSTGRES_USER: admin ##Alterar quando necessário
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: monitoramento ## Para os primeiros testes, posteriormente podemos usar nomes mais especificos
+      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
-      - "5432:5432" ##Verificar se a porta está disponivel e ajustada no BD
+      - "5433:5432" ##Verificar se a porta está disponivel e ajustada no BD
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - monitor-net
     command: >
