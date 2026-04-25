@@ -1,11 +1,30 @@
 import { Pool } from "pg";
 
+// ─────────────────────────────────────────────────────────
+// Pool tunado pra suportar queries paralelas e proteger o backend:
+//  - max=20: ate 20 conexoes simultaneas (default era 10)
+//  - idleTimeoutMillis: fecha conexao ociosa apos 30s
+//  - connectionTimeoutMillis: falha rapido se postgres ta indisponivel
+//  - statement_timeout no nivel da conexao tambem (defesa em profundidade)
+// ─────────────────────────────────────────────────────────
 export const pool = new Pool({
   user: "admin",
   host: "localhost",
   database: "monitoramento",
   password: "admin",
   port: 5433,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+  // 60s no nivel do client — a rota /execute aplica um timeout menor (30s)
+  // via SET LOCAL, mas isso aqui evita que algo escape do limite por bug
+  statement_timeout: 60000,
+});
+
+// loga erros assincronos do pool (tipo: postgres caiu)
+// senao o processo do node morre silenciosamente
+pool.on("error", (err) => {
+  console.error("[pg pool] erro inesperado:", err);
 });
 
 // ─────────────────────────────────────────────────────────

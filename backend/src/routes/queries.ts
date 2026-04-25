@@ -220,7 +220,42 @@ router.post("/import", async (req, res) => {
 // POST /queries/execute
 // body: { sql: string, schemaName?: string }
 // Se schemaName vier, faz SET search_path antes de rodar a query do usuario.
+//
+// Otimizacoes pra evitar travar a UI em queries pesadas:
+//  - statement_timeout (30s) limita queries runaway (libera o pool)
+//  - cap em MAX_ROWS_PER_RESPONSE corta o payload JSON enviado pro browser
+//  - upsert de estatisticas e fire-and-forget (sem await) pra responder ja
 // ─────────────────────────────────────────────────────────
+
+// limite de linhas devolvidas no JSON. Acima disso, marca truncated=true
+// e o frontend exibe um aviso. O DB ainda processa a query inteira, mas
+// nao seguramos a resposta nem entupimos o browser com megas de JSON.
+const MAX_ROWS_PER_RESPONSE = 5000;
+// timeout duro pro Postgres: cancela queries que passem disso.
+const STATEMENT_TIMEOUT_MS = 30000;
+
+// upsert de estatisticas (uma chamada). Se falhar, so loga — nao quebra
+// a resposta pro usuario. Por isso fica em background sem await.
+function recordEditorQueryStats(sql: string, execTimeMs: number) {
+  pool
+    .query(
+      `INSERT INTO query_sniffer.editor_query_stats
+         (query, calls, total_exec_time, last_executed)
+       VALUES ($1, 1, $2, now())
+       ON CONFLICT (query) DO UPDATE
+         SET calls = query_sniffer.editor_query_stats.calls + 1,
+             total_exec_time = query_sniffer.editor_query_stats.total_exec_time + EXCLUDED.total_exec_time,
+             last_executed = now();`,
+      [sql, execTimeMs]
+    )
+    .catch((statsErr) => {
+      console.error(
+        "[stats] falha ao registrar query no editor_query_stats:",
+        statsErr
+      );
+    });
+}
+
 router.post("/execute", async (req, res) => {
   const sql: string = (req.body?.sql ?? "").toString().trim();
   const schemaName: string | undefined = req.body?.schemaName;
@@ -240,48 +275,68 @@ router.post("/execute", async (req, res) => {
 
   const client = await pool.connect();
   const start = Date.now();
+  // controla se o BEGIN deu certo (precisamos saber pra decidir ROLLBACK)
+  let inTransaction = false;
   try {
+    // SET LOCAL so vale dentro de transacao. Por isso BEGIN/COMMIT envolvendo
+    // statement_timeout + search_path + a query do usuario.
+    await client.query("BEGIN");
+    inTransaction = true;
+
+    // 1) protege o pool: se a query passar do timeout, o postgres cancela
+    await client.query(`SET LOCAL statement_timeout = ${STATEMENT_TIMEOUT_MS}`);
+
+    // 2) coloca o schema da sessao no search_path pra que o usuario consiga
+    //    fazer SELECT * FROM minha_tabela sem prefixar o schema.
     if (schemaName) {
       await client.query(
-        `SET search_path TO ${quoteIdent(schemaName)}, public`
+        `SET LOCAL search_path TO ${quoteIdent(schemaName)}, public`
       );
     }
 
+    // 3) executa a query do usuario
     const result = await client.query(sql);
+
+    // 4) commita a transacao — fora do try interno pra que erro aqui
+    //    tambem caia no catch e faca ROLLBACK
+    await client.query("COMMIT");
+    inTransaction = false;
+
     const execTimeMs = Date.now() - start;
 
-    // registra a query nas nossas estatisticas do editor
-    // (upsert por texto da query — mesma query soma calls e tempo total)
-    try {
-      await pool.query(
-        `INSERT INTO query_sniffer.editor_query_stats
-           (query, calls, total_exec_time, last_executed)
-         VALUES ($1, 1, $2, now())
-         ON CONFLICT (query) DO UPDATE
-           SET calls = query_sniffer.editor_query_stats.calls + 1,
-               total_exec_time = query_sniffer.editor_query_stats.total_exec_time + EXCLUDED.total_exec_time,
-               last_executed = now();`,
-        [sql, execTimeMs]
-      );
-    } catch (statsErr) {
-      console.error("[stats] falha ao registrar query no editor_query_stats:", statsErr);
-      // nao falha a resposta pro usuario por conta das estatisticas
-    }
+    // 5) trunca o array de linhas pra nao sufocar o browser
+    const fullRows = result.rows ?? [];
+    const totalRows = fullRows.length;
+    const truncated = totalRows > MAX_ROWS_PER_RESPONSE;
+    const rowsToSend = truncated
+      ? fullRows.slice(0, MAX_ROWS_PER_RESPONSE)
+      : fullRows;
 
+    // 6) responde ja — registra stats em background (nao bloqueia)
     res.json({
-      rows: result.rows,
+      rows: rowsToSend,
       fields: (result.fields ?? []).map((f: any) => ({ name: f.name })),
       rowCount: result.rowCount,
       execTimeMs,
+      totalRows,
+      truncated,
+      maxRows: MAX_ROWS_PER_RESPONSE,
     });
+
+    recordEditorQueryStats(sql, execTimeMs);
   } catch (err: any) {
     const execTimeMs = Date.now() - start;
+    // garante o ROLLBACK se a transacao ficou aberta
+    if (inTransaction) {
+      await client.query("ROLLBACK").catch(() => {});
+    }
     console.error(err);
     res.status(400).json({
       error: err?.message ?? "Erro ao executar a query.",
       execTimeMs,
     });
   } finally {
+    // libera o slot do pool em qualquer cenario
     client.release();
   }
 });
