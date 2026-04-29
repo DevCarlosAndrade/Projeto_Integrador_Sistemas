@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 import {
   AlertTriangle,
   CheckCircle2,
@@ -77,6 +79,25 @@ const exportarCSV = () => {
 
  URL.revokeObjectURL(url);
 };
+
+const PAGE_SIZE = 1000;
+
+const [pagina, setPagina] = useState(1);
+
+useEffect(() => {
+  setPagina(1);
+}, [resultadoQuery]);
+
+const inicio =
+ (pagina - 1) * PAGE_SIZE;
+
+const fim =
+ inicio + PAGE_SIZE;
+
+const totalPaginas =
+  resultadoQuery && resultadoQuery.rows.length > 0
+    ? Math.max(1, Math.ceil(resultadoQuery.rows.length / PAGE_SIZE))
+    : 1;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#06070f]">
@@ -178,26 +199,70 @@ const exportarCSV = () => {
               );
             })()}
 
-            <div className="ml-auto">
-      <button
-        onClick={exportarCSV}
-        disabled={!resultadoQuery?.rows?.length}
-        className="
-          px-3 py-1.5
-          rounded-md
-          border border-blue-500/30
-          text-blue-400
-          hover:bg-blue-500/10
-          text-[11px]
-          font-black
-          uppercase
-          tracking-wider
-          transition
-        "
-      >
-        Exportar
-      </button>
-    </div>
+<div className="ml-auto flex items-center gap-3">
+
+  <div className="flex items-center gap-2 text-xs">
+
+    <button
+      disabled={pagina===1}
+      onClick={()=>setPagina(p=>p-1)}
+      className="
+        px-2 py-1
+        rounded-md
+        border border-white/10
+        hover:bg-white/5
+        disabled:opacity-30
+      "
+    >
+      ←
+    </button>
+
+    <span className="text-slate-500 font-mono whitespace-nowrap">
+      {inicio+1}-
+      {Math.min(
+        fim,
+        resultadoQuery.rows.length
+      )}
+      {" "}de{" "}
+      {resultadoQuery.rows.length.toLocaleString("pt-BR")}
+    </span>
+
+    <button
+      disabled={pagina===totalPaginas}
+      onClick={()=>setPagina(p=>p+1)}
+      className="
+        px-2 py-1
+        rounded-md
+        border border-white/10
+        hover:bg-white/5
+        disabled:opacity-30
+      "
+    >
+      →
+    </button>
+
+  </div>
+
+  <button
+    onClick={exportarCSV}
+    disabled={!resultadoQuery?.rows?.length}
+    className="
+      px-3 py-1.5
+      rounded-md
+      border border-blue-500/30
+      text-blue-400
+      hover:bg-blue-500/10
+      text-[11px]
+      font-black
+      uppercase
+      tracking-wider
+      transition
+    "
+  >
+    Exportar
+  </button>
+
+</div>
           </div>
 
           {/* Tabela */}
@@ -208,12 +273,13 @@ const exportarCSV = () => {
                   ? resultadoQuery.totalRows
                   : resultadoQuery.rows.length;
               const linhasParaRender =
-                resultadoQuery.rows.length > MAX_RENDERED_ROWS
-                  ? resultadoQuery.rows.slice(0, MAX_RENDERED_ROWS)
-                  : resultadoQuery.rows;
+              resultadoQuery.rows.slice(
+                inicio,
+                fim
+              );
+
               const truncadoServer = !!resultadoQuery.truncated;
-              const truncadoCliente =
-                resultadoQuery.rows.length > MAX_RENDERED_ROWS;
+              const truncadoCliente = false;
               const mostrarBanner = truncadoServer || truncadoCliente;
 
               return (
@@ -231,7 +297,7 @@ const exportarCSV = () => {
                             <strong>
                               {resultadoQuery.rows.length.toLocaleString("pt-BR")}
                             </strong>{" "}
-                            de{" "}
+                            {/* de{" "}
                             <strong>
                               {totalRowsServer.toLocaleString("pt-BR")}
                             </strong>{" "}
@@ -245,7 +311,7 @@ const exportarCSV = () => {
                                 </strong>{" "}
                                 no editor
                               </>
-                            )}
+                            )} */}
                             . Use <span className="font-mono">LIMIT</span> /{" "}
                             <span className="font-mono">WHERE</span> pra reduzir.
                           </>

@@ -13,12 +13,12 @@ export const pool = new Pool({
   database: "monitoramento",
   password: "admin",
   port: 5433,
-  max: 20,
-  idleTimeoutMillis: 30000,
+  max: 30,
+  idleTimeoutMillis: 60000, // 1 min
   connectionTimeoutMillis: 5000,
-  // 60s no nivel do client — a rota /execute aplica um timeout menor (30s)
+  /// 4 min no nivel do pool. A rota /execute aplica 3 min (SET LOCAL) e este valor atua como failsafe.
   // via SET LOCAL, mas isso aqui evita que algo escape do limite por bug
-  statement_timeout: 60000,
+  statement_timeout: 240000, // 4 min
 });
 
 // loga erros assincronos do pool (tipo: postgres caiu)

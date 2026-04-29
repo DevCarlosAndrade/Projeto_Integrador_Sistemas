@@ -37,7 +37,7 @@ export default function LoginPage() {
     document.cookie =
     `firebase-token=${token}; path=/; max-age=3600; SameSite=Lax`;
        console.log("Login autorizado!");
-      router.push('/dashboard');
+      router.push('/editor');
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer login');
     } finally {
@@ -60,7 +60,7 @@ export default function LoginPage() {
       document.cookie =
       `firebase-token=${token}; path=/; max-age=3600; SameSite=Lax`;
       console.log("Login com Google autorizado!");
-      router.push('/dashboard');
+      router.push('/editor');
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer login com Google');
     } finally {

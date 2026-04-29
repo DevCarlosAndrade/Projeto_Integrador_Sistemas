@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { pool } from "../config/db";
+import Cursor from "pg-cursor";
 
 const router = Router();
 
@@ -230,9 +231,9 @@ router.post("/import", async (req, res) => {
 // limite de linhas devolvidas no JSON. Acima disso, marca truncated=true
 // e o frontend exibe um aviso. O DB ainda processa a query inteira, mas
 // nao seguramos a resposta nem entupimos o browser com megas de JSON.
-const MAX_ROWS_PER_RESPONSE = 5000;
+const MAX_ROWS_PER_RESPONSE = 50000;
 // timeout duro pro Postgres: cancela queries que passem disso.
-const STATEMENT_TIMEOUT_MS = 30000;
+const STATEMENT_TIMEOUT_MS = 180000; // 3 minutos
 
 // upsert de estatisticas (uma chamada). Se falhar, so loga — nao quebra
 // a resposta pro usuario. Por isso fica em background sem await.
@@ -254,6 +255,89 @@ function recordEditorQueryStats(sql: string, execTimeMs: number) {
         statsErr
       );
     });
+}
+
+async function executarComCursor(
+ client: any,
+ sql: string,
+ maxRows: number
+) {
+
+ const cursor =
+  client.query(
+   new Cursor(sql)
+  );
+
+ let rows:any[] = [];
+ let fields:any[] = [];
+
+ try {
+
+   while(rows.length < maxRows){
+
+    const chunk =
+     await new Promise<any[]>(
+      (resolve,reject)=>{
+
+       cursor.read(
+        500,
+        (err: Error | null, data: any[] | null) => {
+
+         if (err) {
+           reject(err);
+           return;
+         }
+
+         resolve(data || []);
+        }
+       );
+
+      }
+     );
+
+    if(chunk.length === 0){
+      break;
+    }
+
+    if(
+      !fields.length &&
+      chunk[0]
+    ){
+      fields =
+       Object.keys(chunk[0])
+       .map(name=>({name}));
+    }
+
+    rows.push(...chunk);
+
+    if(rows.length >= maxRows){
+      rows =
+       rows.slice(
+        0,
+        maxRows
+       );
+      break;
+    }
+   }
+
+   return {
+    rows,
+    fields,
+    truncated:
+      rows.length >= maxRows
+   };
+
+ } finally {
+
+   await new Promise(
+    resolve=>
+      cursor.close(
+        ()=>resolve(true)
+      )
+   );
+
+ }
+
 }
 
 router.post("/execute", async (req, res) => {
@@ -295,7 +379,12 @@ router.post("/execute", async (req, res) => {
     }
 
     // 3) executa a query do usuario
-    const result = await client.query(sql);
+    const result =
+    await executarComCursor(
+      client,
+      sql,
+      MAX_ROWS_PER_RESPONSE
+    );
 
     // 4) commita a transacao — fora do try interno pra que erro aqui
     //    tambem caia no catch e faca ROLLBACK
@@ -305,18 +394,20 @@ router.post("/execute", async (req, res) => {
     const execTimeMs = Date.now() - start;
 
     // 5) trunca o array de linhas pra nao sufocar o browser
-    const fullRows = result.rows ?? [];
-    const totalRows = fullRows.length;
-    const truncated = totalRows > MAX_ROWS_PER_RESPONSE;
-    const rowsToSend = truncated
-      ? fullRows.slice(0, MAX_ROWS_PER_RESPONSE)
-      : fullRows;
+    const rowsToSend =
+    result.rows;
+
+    const totalRows =
+    result.rows.length;
+
+    const truncated =
+    result.truncated;
 
     // 6) responde ja — registra stats em background (nao bloqueia)
     res.json({
       rows: rowsToSend,
-      fields: (result.fields ?? []).map((f: any) => ({ name: f.name })),
-      rowCount: result.rowCount,
+      fields: result.fields,
+      rowCount: rowsToSend.length,
       execTimeMs,
       totalRows,
       truncated,

@@ -59,9 +59,6 @@ export default function HomePage() {
           >
             Começar Agora <ArrowRight size={18} />
           </Link>
-          <button className="bg-slate-900/50 border border-slate-800 text-white hover:bg-slate-800 px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all backdrop-blur-md">
-            Ver Demo
-          </button>
         </div>
 
         {/* Badges de Recursos */}

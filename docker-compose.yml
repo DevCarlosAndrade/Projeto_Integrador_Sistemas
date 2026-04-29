@@ -10,6 +10,14 @@ services:
     networks:
       - monitor-net
 
+  node-exporter:
+    image: prom/node-exporter
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    networks:
+      - monitor-net
+
   grafana:
     image: grafana/grafana
     container_name: grafana
