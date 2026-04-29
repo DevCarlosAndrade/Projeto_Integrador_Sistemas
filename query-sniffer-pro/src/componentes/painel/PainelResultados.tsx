@@ -29,7 +29,55 @@ export function PainelResultados({
   executando: boolean;
   resultadoQuery: ResultadoQuery | null;
   erroQuery: ErroQuery | null;
-}) {
+}) {////////
+
+const exportarCSV = () => {
+
+ if (!resultadoQuery?.rows?.length) return;
+
+ const headers =
+   resultadoQuery.fields.map(
+    campo => campo.name
+   );
+
+ const linhas = [
+   headers.join(","),
+   ...resultadoQuery.rows.map((row:any)=>
+      headers.map(coluna=>{
+        const valor = row[coluna];
+
+        return `"${String(valor ?? "")
+          .replace(/"/g,'""')}"`;
+      }).join(",")
+   )
+ ];
+
+ const csv =
+  linhas.join("\n");
+
+ const blob =
+  new Blob(
+   [csv],
+   {
+    type:"text/csv;charset=utf-8;"
+   }
+  );
+
+ const url =
+  URL.createObjectURL(blob);
+
+ const link =
+  document.createElement("a");
+
+ link.href = url;
+ link.download =
+  `query_resultado_${Date.now()}.csv`;
+
+ link.click();
+
+ URL.revokeObjectURL(url);
+};
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#06070f]">
       {/* Idle */}
@@ -78,14 +126,13 @@ export function PainelResultados({
       {resultadoQuery && !executando && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Status bar */}
-          <div className="flex items-center gap-4 px-4 py-2 border-b border-white/5 bg-[#0a0c20]/30 shrink-0">
-            <div className="flex items-center gap-1.5 text-green-400">
+<div className="flex items-center px-4 py-2 border-b border-white/5 bg-[#0a0c20]/30 shrink-0">            <div className="flex items-center gap-1.5 text-green-400 mr-4">
               <CheckCircle2 size={13} />
               <span className="text-[11px] font-black uppercase tracking-wider">
                 Sucesso
               </span>
             </div>
-            <div className="flex items-center gap-1 text-slate-500 text-[11px]">
+            <div className="flex items-center gap-1 text-slate-500 text-[11px] mr-4">
               <Rows size={12} />
               <span>
                 {(() => {
@@ -100,7 +147,7 @@ export function PainelResultados({
                 })()}
               </span>
             </div>
-            <div className="flex items-center gap-1 text-slate-500 text-[11px]">
+            <div className="flex items-center gap-1 text-slate-500 text-[11px] mr-4">
               <Clock size={12} />
               <span>{resultadoQuery.execTimeMs}ms</span>
             </div>
@@ -130,6 +177,27 @@ export function PainelResultados({
                 </div>
               );
             })()}
+
+            <div className="ml-auto">
+      <button
+        onClick={exportarCSV}
+        disabled={!resultadoQuery?.rows?.length}
+        className="
+          px-3 py-1.5
+          rounded-md
+          border border-blue-500/30
+          text-blue-400
+          hover:bg-blue-500/10
+          text-[11px]
+          font-black
+          uppercase
+          tracking-wider
+          transition
+        "
+      >
+        Exportar
+      </button>
+    </div>
           </div>
 
           {/* Tabela */}

@@ -258,7 +258,7 @@ router.post("/chat", async (req, res) => {
 // POST /ai/optimize
 // body: {
 //   query: string,              // SQL original
-//   tables?: [{ name, columns }],
+//   tables?: [{ name, columns: [{ name, type }] }],
 //   meanExecMs?: number,        // metricas atuais (opcional, so pra dar contexto)
 //   totalExecMs?: number,
 //   calls?: number
@@ -326,10 +326,13 @@ router.post("/optimize", async (req, res) => {
     const reply = await callGemini({
       systemInstruction,
       userMessage,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 2048, //aumentei para permitir respostas mais longas (foi oq quebrou antes)
       temperature: 0.3,
       logTag: "ai/optimize",
     });
+
+    //remover o comentario caso queira analisar a resposta bruta do gemini
+    //console.log("[ai/optimize] Resposta bruta da IA:", reply);
 
     // extrai o primeiro bloco ```sql pra devolver ja separado pro frontend
     const sqlFence = /```sql\s*([\s\S]*?)```/i.exec(reply);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-
+import AuthGuard from "@/src/componentes/auth/AuthGuard";
 import type {
   ErroQuery,
   MensagemChat as TipoMensagemChat,
@@ -532,6 +532,7 @@ export default function Dashboard() {
   // RENDER
   // ─────────────────────────────────────────────────────
   return (
+  <AuthGuard>
     <main className="h-screen bg-[#04040a] text-slate-100 font-sans flex flex-col overflow-hidden">
       {/* Input de arquivo (escondido) */}
       <input
@@ -644,5 +645,6 @@ export default function Dashboard() {
         />
       )}
     </main>
+   </AuthGuard>
   );
 }
