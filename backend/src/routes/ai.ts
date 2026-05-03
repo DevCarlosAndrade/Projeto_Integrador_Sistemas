@@ -20,8 +20,8 @@ const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
 // o servidor tenta o proximo automaticamente. Os "lite" tem MUITO mais
 // capacidade no free tier e sao tao bons pra SQL quanto os flash normais.
 const MODEL_CHAIN = [
-  "gemini-flash-latest",
   "gemini-2.0-flash",
+  "gemini-flash-latest",
   "gemini-flash-lite-latest",
   "gemini-2.0-flash-lite",
 ];
@@ -326,7 +326,7 @@ router.post("/optimize", async (req, res) => {
     const reply = await callGemini({
       systemInstruction,
       userMessage,
-      maxOutputTokens: 2048, //aumentei para permitir respostas mais longas (foi oq quebrou antes)
+      maxOutputTokens: 4096, //aumentei para permitir respostas mais longas (foi oq quebrou antes)
       temperature: 0.3,
       logTag: "ai/optimize",
     });
