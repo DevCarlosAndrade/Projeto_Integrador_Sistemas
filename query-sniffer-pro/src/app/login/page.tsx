@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 // Importação dos ícones do Lucide (Certifique-se de ter instalado: npm install lucide-react)
 import { ShieldCheck, Mail, Lock } from 'lucide-react';
 // Firebase imports
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -23,9 +24,20 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      console.log("Login autorizado!");
-      router.push('/dashboard');
+    const userCredential =
+    await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+
+    const token =
+    await userCredential.user.getIdToken();
+
+    document.cookie =
+    `firebase-token=${token}; path=/; max-age=3600; SameSite=Lax`;
+       console.log("Login autorizado!");
+      router.push('/editor');
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer login');
     } finally {
@@ -39,15 +51,55 @@ export default function LoginPage() {
 
     try {
       const provider = new GoogleAuthProvider();
+      const result =
       await signInWithPopup(auth, provider);
+
+      const token =
+      await result.user.getIdToken();
+
+      document.cookie =
+      `firebase-token=${token}; path=/; max-age=3600; SameSite=Lax`;
       console.log("Login com Google autorizado!");
-      router.push('/dashboard');
+      router.push('/editor');
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer login com Google');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleForgotPassword = async () => {
+  setError('');
+  setSuccess('');
+
+  if (!email) {
+    setError('Digite seu e-mail antes de recuperar a senha.');
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    await sendPasswordResetEmail(auth, email);
+
+    setSuccess(
+    'Link de redefinição enviado para seu e-mail.'
+    );
+
+  } catch (err: any) {
+
+    if (err.code === 'auth/user-not-found') {
+      setError('Usuário não encontrado.');
+    } else if (err.code === 'auth/invalid-email') {
+      setError('E-mail inválido.');
+    } else {
+      setError('Erro ao enviar recuperação de senha.');
+    }
+
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <main className="min-h-screen bg-slate-950 flex items-center justify-center px-6 relative font-sans">
@@ -111,13 +163,30 @@ export default function LoginPage() {
               /> 
               Lembrar dados
             </label>
-            <a href="#" className="text-blue-700 hover:text-sky-400 transition-colors">Esqueceu a senha?</a>
+            <button
+            type="button"
+            onClick={handleForgotPassword}
+            disabled={loading}
+            className="text-blue-700 hover:text-sky-400 transition-colors disabled:opacity-50"
+          >
+            Esqueceu a senha?
+          </button>
           </div>
 
           {error && (
-            <p className="text-red-500 text-xs text-center font-bold animate-pulse">
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 animate-pulse">
+            <p className="text-red-400 text-xs text-center font-bold tracking-wide">
               {error}
             </p>
+          </div>
+          )}
+
+          {success && (
+          <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 animate-pulse">
+            <p className="text-emerald-400 text-xs text-center font-bold tracking-wide">
+              {success}
+            </p>
+          </div>
           )}
 
           <button 

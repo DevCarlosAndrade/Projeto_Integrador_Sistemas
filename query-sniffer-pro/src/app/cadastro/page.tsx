@@ -38,7 +38,7 @@ export default function CadastroPage() {
       await createUserWithEmailAndPassword(auth, email, password);
       console.log("Usuário cadastrado com sucesso!");
       // Redirecionar para dashboard após cadastro
-      router.push('/dashboard');
+      router.push('/editor');
     } catch (err: any) {
       setError(err.message || 'Erro ao criar conta');
     } finally {
