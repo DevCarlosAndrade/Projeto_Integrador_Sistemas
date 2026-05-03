@@ -33,7 +33,7 @@ export function BarraSuperior() {
           rel="noopener noreferrer"
           className="text-blue-400 font-bold flex items-center gap-2 text-sm hover:text-blue-300 transition-colors"
         >
-          Monitoramento <Activity size={15}/>
+          Dashboard <Activity size={15}/>
         </a>
 
         <button

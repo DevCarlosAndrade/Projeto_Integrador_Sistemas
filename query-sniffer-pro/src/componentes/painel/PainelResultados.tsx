@@ -83,9 +83,11 @@ const exportarCSV = () => {
 const PAGE_SIZE = 1000;
 
 const [pagina, setPagina] = useState(1);
+const [mostrarAviso, setMostrarAviso] = useState(true);
 
 useEffect(() => {
   setPagina(1);
+  setMostrarAviso(true);
 }, [resultadoQuery]);
 
 const inicio =
@@ -280,12 +282,13 @@ const totalPaginas =
 
               const truncadoServer = !!resultadoQuery.truncated;
               const truncadoCliente = false;
-              const mostrarBanner = truncadoServer || truncadoCliente;
+              const mostrarBanner = (truncadoServer || truncadoCliente) && mostrarAviso;
 
               return (
                 <div className="flex-1 overflow-auto">
                   {mostrarBanner && (
-                    <div className="sticky top-0 z-20 flex items-center gap-2 px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 text-[11px]">
+                    <div className="flex items-center justify-between gap-2 px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 text-[11px]">
+                    <div className="flex items-center gap-2">
                       <AlertTriangle
                         size={12}
                         className="text-amber-400 shrink-0"
@@ -297,21 +300,6 @@ const totalPaginas =
                             <strong>
                               {resultadoQuery.rows.length.toLocaleString("pt-BR")}
                             </strong>{" "}
-                            {/* de{" "}
-                            <strong>
-                              {totalRowsServer.toLocaleString("pt-BR")}
-                            </strong>{" "}
-                            linhas
-                            {truncadoCliente && (
-                              <>
-                                {" "}
-                                · exibindo as primeiras{" "}
-                                <strong>
-                                  {MAX_RENDERED_ROWS.toLocaleString("pt-BR")}
-                                </strong>{" "}
-                                no editor
-                              </>
-                            )} */}
                             . Use <span className="font-mono">LIMIT</span> /{" "}
                             <span className="font-mono">WHERE</span> pra reduzir.
                           </>
@@ -325,11 +313,20 @@ const totalPaginas =
                             <strong>
                               {resultadoQuery.rows.length.toLocaleString("pt-BR")}
                             </strong>{" "}
-                            linhas (cap do navegador pra manter a UI fluida).
+                            linhas.
                           </>
                         )}
                       </span>
                     </div>
+
+                    <button
+                      onClick={() => setMostrarAviso(false)}
+                      className="text-amber-400 hover:text-amber-200 text-xs font-bold px-2"
+                    >
+                      ✕
+                    </button>
+
+                  </div>
                   )}
 
                   <table className="w-full text-sm border-collapse">
@@ -360,7 +357,7 @@ const totalPaginas =
                             ${i % 2 === 0 ? "bg-transparent" : "bg-white/[0.015]"}`}
                         >
                           <td className="px-3 py-2 text-[11px] text-slate-700 font-mono border-r border-white/5 select-none">
-                            {i + 1}
+                            {inicio + i + 1}
                           </td>
                           {resultadoQuery.fields.map((f) => {
                             const val = row[f.name];
